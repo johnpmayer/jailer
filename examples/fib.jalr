@@ -1,0 +1,4 @@
+(define fact
+	(lambda (x) 
+		(* x (fact (-1+ x)))))
+(fact 4)
