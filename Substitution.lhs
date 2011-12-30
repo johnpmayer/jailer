@@ -41,43 +41,44 @@ result of evalutaion.
 > evalExp e@(Symbol       _) = return e
 > evalExp e@(Combination []) = return e
 
-> evalExp (Combination (operator:operands)) =
->   do operands' <- mapM evalExp operands
->      operator' <- evalExp operator
->      evalCombination operator' operands'
+> evalExp (Combination (operator:operands)) = case operator of
 
-> evalCombination :: Expression -> [Expression] -> Evaluator Expression
+>   (Symbol _) -> 
+>     throwError "No rule to apply a symbol"
 
-> evalCombination (Atom s) operands = 
->   case Map.lookup s specialForms of
+>   (Combination ((Atom "lambda") : (Combination fArgs) : body : [])) ->
+>     do operands' <- mapM evalExp operands
+>        substitute fArgs operands' body >>= evalExp
+
+>   (Combination _) ->
+>     throwError "No rule to apply a combination"
+
+>   (Atom s) -> case Map.lookup s specialForms of
 >     Just rule -> rule operands
 >     Nothing ->
->       do context <- get
->          case Map.lookup s context of
->            Just definition -> evalExp.Combination $ definition : operands
->            Nothing -> throwError $ 
->                       "No rule or definition for '" ++ s ++ "'"
-
-> evalCombination (Symbol _) _ = throwError "No rule to apply a symbol"
-
-> evalCombination (Combination 
->                    ((Atom "lambda") : (Combination formalArgs) : body : []))
->                 operands = do
->   exp' <- substitute formalArgs operands body
-
-TODO! catch error and augment with more information
-
->   evalExp exp'
-
-> evalCombination (Combination _) _ = throwError "No rule to apply a combination"
+>       do operands' <- mapM evalExp operands
+>          case Map.lookup s primitives of
+>            Just rule -> rule operands'
+>            Nothing ->
+>              do context <- get
+>                 case Map.lookup s context of
+>                   Just definition -> evalExp.Combination $ 
+>                                      definition : operands'
+>                   Nothing -> throwError $ 
+>                              "No rule or definition for '" ++ s ++ "'"
 
 Here's a table for all rules associated with each special form
 
 > type Rule = [Expression] -> Evaluator Expression
+> type RuleTable = Map String Rule
 
-> specialForms :: Map String Rule
+> specialForms :: RuleTable
 > specialForms = Map.fromList [ ("lambda", evalLambda),
 >                               ("define", evalDefine) ]
+
+> primitives :: RuleTable
+> primitives = Map.fromList [ ("inc", evalInc),
+>                             ("dec", evalDec) ]
 
 > evalLambda :: Rule
 > evalLambda ops = return $ Combination $ Atom "lambda" : ops
@@ -92,6 +93,20 @@ Here's a table for all rules associated with each special form
 
 > evalDefine _ = throwError $ 
 >   "Define expressions must be of form (define <atom> <expression>)"
+
+> evalInc :: Rule
+> evalInc ((Atom s):[]) =
+>   case reads s :: [(Int, String)] of
+>     [(x,"")] -> return . Atom . show $ (x + 1)
+>     _        -> throwError $ "Cannot increment '" ++ s ++ "'"
+> evalInc ops = throwError $ "invalid operands to inc: '" ++ show ops ++ "'"
+
+> evalDec :: Rule
+> evalDec ((Atom s):[]) =
+>   case reads s :: [(Int, String)] of
+>     [(x,"")] -> return . Atom . show $ (x - 1)
+>     _        -> throwError $ "Cannot increment '" ++ s ++ "'"
+> evalDec _ = throwError "invalid parameters to dec"
 
 Substitution
 
