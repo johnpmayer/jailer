@@ -54,7 +54,7 @@ Everything else can be names for atoms.
 Here are some tests for the lexer only.
 
 > testLexer :: IO (Either ParseError [Token])
-> testLexer = parseFromFile lexer "examples/fib.jalr"
+> testLexer = parseFromFile lexer "prelude.jalr"
 
 Second, the parser takes a stream of tokens and computes of sequence of jalr
 expressions or a parse error.

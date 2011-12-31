@@ -1,18 +1,20 @@
 
 > {-# OPTIONS -Wall #-}
 
-> module Interactive where
+> module Main where
+
+> import qualified Data.Map as Map
+> import System.IO
 
 > import ParserCombinators
 > import JALRParser
 > import Substitution
 
-> import qualified Data.Map as Map
-
 > type Error = String
 
 > repl :: Context -> IO ()
 > repl c = do putStr "jalr> "
+>             hFlush stdout
 >             line <- getLine
 >             case parse lexer line of
 >               Left err -> graceful c err
