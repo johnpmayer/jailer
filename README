@@ -1,0 +1,21 @@
+
+Example interactive session
+
+jalr> (define + (lambda (x y) (if (= x 0) y (+ (dec x) (inc y)))))
+*defined +*
+jalr> (+ 3 4)
+7
+jalr> (define * (lambda (x y) (if (= x 1) y (+ y (* (dec x) y)))))
+*defined **
+jalr> (* 3 5)
+15
+jalr> (define fact (lambda (n) (if (= n 0) 1 (* n (fact (dec n))))))
+*defined fact*
+jalr> (fact 0)
+1
+jalr> (fact 1)
+1
+jalr> (fact 2)
+2
+jalr> (fact 4)
+24

@@ -67,21 +67,31 @@ result of evalutaion.
 >                   Nothing -> throwError $ 
 >                              "No rule or definition for '" ++ s ++ "'"
 
-Here's a table for all rules associated with each special form
+Here's a table for all rules associated with each special form and 
+primitive operation. The input to each computation is the cdr of the
+list of expressions in the combination.
 
 > type Rule = [Expression] -> Evaluator Expression
 > type RuleTable = Map String Rule
 
 > specialForms :: RuleTable
 > specialForms = Map.fromList [ ("lambda", evalLambda),
->                               ("define", evalDefine) ]
+>                               ("define", evalDefine),
+>                               ("if",     evalIf    ) ]
 
 > primitives :: RuleTable
 > primitives = Map.fromList [ ("inc", evalInc),
->                             ("dec", evalDec) ]
+>                             ("dec", evalDec),
+>                             ("=", evalIntEq) ]
+
+Note that evaluating a lambda doesn't create anything special in
+the substitution model, lambda is only special when, after evaluation,
+it is the first expression in another combination (see above).
 
 > evalLambda :: Rule
 > evalLambda ops = return $ Combination $ Atom "lambda" : ops
+
+"define" augments the context with a new definition (only once per name)
 
 > evalDefine :: Rule
 > evalDefine ((Atom s):e:[]) = do
@@ -89,26 +99,55 @@ Here's a table for all rules associated with each special form
 >   if Map.member s context
 >   then throwError $ "Redefinition of '" ++ s ++ "'"
 >   else do put $ Map.insert s e context
->           return.Atom $ "*defined '" ++ s ++ "'*"
-
+>           return.Atom $ "*defined " ++ s ++ "*"
 > evalDefine _ = throwError $ 
 >   "Define expressions must be of form (define <atom> <expression>)"
+
+"if" is a simple test if <text> is the Atom "true"
+
+> evalIf :: Rule
+> evalIf (test:consequent:alternate:[]) = do
+>   testValue <- evalExp test
+>   case testValue of
+>     (Atom "true") -> evalExp consequent
+>     _             -> evalExp alternate
+> evalIf _ = throwError 
+>   "conditional clause not of form (if <test> <consequent> <alternate>)"
+
+"inc" and "dec" is valid only when applied to a single integer
 
 > evalInc :: Rule
 > evalInc ((Atom s):[]) =
 >   case reads s :: [(Int, String)] of
 >     [(x,"")] -> return . Atom . show $ (x + 1)
 >     _        -> throwError $ "Cannot increment '" ++ s ++ "'"
-> evalInc ops = throwError $ "invalid operands to inc: '" ++ show ops ++ "'"
+> evalInc ops = throwError $ "invalid operands to inc: \"" ++ 
+>                            show ops ++ "\""
 
 > evalDec :: Rule
 > evalDec ((Atom s):[]) =
 >   case reads s :: [(Int, String)] of
 >     [(x,"")] -> return . Atom . show $ (x - 1)
 >     _        -> throwError $ "Cannot increment '" ++ s ++ "'"
-> evalDec _ = throwError "invalid parameters to dec"
+> evalDec ops = throwError $ "invalid operands to inc: \"" ++ 
+>                            show ops ++ "\""
 
-Substitution
+"=" is valid only when applied to two integers
+
+> evalIntEq :: Rule
+> evalIntEq ((Atom s1):(Atom s2):[]) = 
+>   case reads s1 :: [(Int, String)] of
+>     [(x,"")] -> case reads s2 :: [(Int,String)] of
+>       [(y,"")] -> if x == y 
+>                   then return (Atom "true") 
+>                   else return (Atom "false")
+>       _ -> throwError $ "Not an integer \"" ++ s2 ++ "\""
+>     _ -> throwError $ "Not aan integer \"" ++ s1 ++ "\""
+> evalIntEq ops = throwError $ "invalid operands to =: \"" ++ 
+>                              show ops ++ "\""
+
+Substitution replaces all occurances of a set of formal arguments with the
+respective supplied operands in the body of the expression.
 
 > substitute :: [Expression] -> [Expression] -> Expression -> Evaluator Expression
 
