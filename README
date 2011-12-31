@@ -1,5 +1,7 @@
 
-Example interactive session
+JAILER
+
+Example ession
 
 jalr> (define + (lambda (x y) (if (= x 0) y (+ (dec x) (inc y)))))
 *defined +*
