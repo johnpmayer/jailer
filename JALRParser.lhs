@@ -5,6 +5,9 @@
 
 > import Control.Monad
 > import Grammar
+
+ > import Text.ParserCombinators.Parsec
+
 > import Parser
 > import ParserCombinators
 
